@@ -2,10 +2,29 @@ import tkinter as tk
 from tkinter import messagebox
 from password_generator import password_generator
 import pyperclip
+import json
 from tkinter import ttk
 
 def show_alert():
     messagebox.showinfo("Password Manager","Password Saved!")
+
+def search_database():
+    website = website_name_entry.get()
+    try:
+        with open('data.json', 'r') as data_file:
+            data = json.load(data_file)
+    except FileNotFoundError:
+        messagebox.showinfo("Password Manager", "No Data File Found!")
+    else:
+        if website in data:
+            email = data[website]["email"]
+            password = data[website]["password"]
+            messagebox.showinfo(website, f"Email: {email}\nPassword: {password}")
+        else:
+            messagebox.showinfo("Password Manager","No details for {website} exists!")
+    finally:
+        website_name_entry.delete(0, 'end')
+
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 def generate_password():
     password = password_generator()
@@ -21,9 +40,23 @@ def save_to_file():
             if password != "" or password.strip() != "":
                 is_ok = messagebox.askokcancel(title=website,message=f"These are the details entered:\nEmail: {email}\nPassword: {password}\nIs this correct?")
                 if is_ok:
-                    with open("my_passwords.txt", "a") as output_file:
-                        line = f"{website} | {email} | {password}\n"
-                        output_file.write(line)
+                    data_entry = {
+                        website: {
+                            "email": email,
+                            "password": password
+                        }
+                    }
+                    try:
+                        with open('data.json', 'r') as data_file:
+                            data = json.load(data_file)
+                    except FileNotFoundError:
+                        with open('data.json', 'w') as datafile:
+                            json.dump(data_entry, datafile, indent=4)
+                    else:
+                        data.update(data_entry)
+                        with open('data.json', 'w') as outfile:
+                            json.dump(data, outfile, indent=4)
+
                     website_name_entry.delete(0, 'end')
                     password_entry.delete(0, 'end')
                     website_name_entry.focus()
@@ -62,7 +95,9 @@ website_name_label = tk.Label(text="Website:")
 website_name_label.grid(row=1, column=0)
 website_name_entry = tk.Entry(width=35)
 website_name_entry.focus()
-website_name_entry.grid(row=1, column=1, columnspan=2, sticky='EW')
+website_name_entry.grid(row=1, column=1, sticky='EW', padx=(0, 5))
+website_name_search_button = tk.Button(text="Search", command= search_database)
+website_name_search_button.grid(row=1, column=2, sticky='EW')
 
 email_username_label = tk.Label(text="Email/Username:")
 email_username_label.grid(row=2, column=0)
